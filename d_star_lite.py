@@ -16,10 +16,11 @@ class PriorityQueue:
         return heapq.heappop(self.elements)[1]
 
 class DStarLite:
-    def __init__(self, map, s_start, s_goal):
+    def __init__(self, map, s_start, s_goal, headless=False):
         self.map = map
         self.s_start = s_start
         self.s_goal = s_goal
+        self.headless = headless
 
         self.g = np.ones((map.x_dim, map.y_dim)) * np.inf
         self.rhs = np.ones((map.x_dim, map.y_dim)) * np.inf
@@ -34,9 +35,8 @@ class DStarLite:
 
         self.visited_nodes = []
 
-        print(f"Initializing D* Lite with start: {s_start}, goal: {s_goal}, map size: {map.x_dim}x{map.y_dim}")
-        print("Map grid with obstacles:")
-        print(self.map.grid)
+        if not self.headless:
+            print(f"Initializing D* Lite with start: {s_start}, goal: {s_goal}, map size: {map.x_dim}x{map.y_dim}")
 
     def place_random_obstacles(self, min_obstacles, max_obstacles):
         num_obstacles = np.random.randint(min_obstacles, max_obstacles)
@@ -45,11 +45,6 @@ class DStarLite:
             y = np.random.randint(0, self.map.y_dim)
             if (x, y) != self.s_start and (x, y) != self.s_goal:
                 self.map.grid[x, y] = -1
-        print("Obstacles placed at:")
-        for i in range(self.map.x_dim):
-            for j in range(self.map.y_dim):
-                if self.map.grid[i, j] == -1:
-                    print(f"({i}, {j})")
 
     def calculate_key(self, s):
         g_rhs = min(self.g[s], self.rhs[s])
@@ -73,7 +68,7 @@ class DStarLite:
         if x > 0 and self.map.grid[x - 1, y] != -1:
             neighbors.append((x - 1, y))
         if x < self.map.x_dim - 1 and self.map.grid[x + 1, y] != -1:
-                        neighbors.append((x + 1, y))
+            neighbors.append((x + 1, y))
         if y > 0 and self.map.grid[x, y - 1] != -1:
             neighbors.append((x, y - 1))
         if y < self.map.y_dim - 1 and self.map.grid[x, y + 1] != -1:
@@ -81,7 +76,6 @@ class DStarLite:
         return neighbors
 
     def compute_shortest_path(self):
-        print("Computing shortest path...")
         start_time = time.time()
         iterations = 0
         while not self.open_list.empty():
@@ -97,18 +91,18 @@ class DStarLite:
                 self.update_vertex(u)
                 for s in self.get_neighbors(u):
                     self.update_vertex(s)
-            if time.time() - start_time > 10:  # 10 seconds timeout for the computation
-                print(f"Timeout during shortest path computation after {iterations} iterations")
+            if time.time() - start_time > 60:  # 60 seconds timeout for the computation
+                if not self.headless:
+                    print(f"Timeout during shortest path computation after {iterations} iterations")
                 break
-        print(f"Shortest path computed in {iterations} iterations.")
+        if not self.headless:
+            print(f"Shortest path computed in {iterations} iterations.")
         return self.extract_path()
 
     def move_and_replan(self, robot_position):
-        print(f"Moving and replanning from position: {robot_position}")
         self.s_start = robot_position
         self.k_m += self.heuristic(self.s_start, self.s_goal)
         path = self.compute_shortest_path()
-        print(f"Path: {path}")
         return path, self.visited_nodes
 
     def extract_path(self):
@@ -117,10 +111,10 @@ class DStarLite:
         while current != self.s_goal:
             path.append(current)
             neighbors = self.get_neighbors(current)
-            print(f"Current: {current}, Neighbors: {neighbors}")
             current = min(neighbors, key=lambda s: self.g[s])
             if self.g[current] == np.inf:
-                print("Path blocked or goal unreachable.")
+                if not self.headless:
+                    print("Path blocked or goal unreachable.")
                 break
         path.append(self.s_goal)
         return path

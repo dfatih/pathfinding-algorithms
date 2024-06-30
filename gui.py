@@ -62,7 +62,7 @@ class Animation:
 
             for (x, y) in visited_nodes:
                 if (x, y) != self.start and (x, y) != self.goal:
-                    pygame.draw.rect(self.screen, (0, 0, 255), pygame.Rect(x * 10, y * 10, 10, 10))  # Visited nodes are blue
+                    pygame.draw.rect(self.screen, (173, 216, 230), pygame.Rect(x * 10, y * 10, 10, 10))  # Visited nodes are blue
                     pygame.draw.rect(self.screen, (0, 0, 0), pygame.Rect(x * 10, y * 10, 10, 10), 1)  # Visited nodes border
 
             for (x, y) in path:
