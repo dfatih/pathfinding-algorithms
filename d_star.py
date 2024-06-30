@@ -1,165 +1,103 @@
-from typing import List, Tuple
-from grid import OccupancyGridMap
-from priority_queue import PriorityQueue, Priority
 import numpy as np
-from utils import heuristic, Vertex, Vertices
-from tabulate import tabulate
+import heapq
+import time
 
-OBSTACLE = 255
-UNOCCUPIED = 0
+class PriorityQueue:
+    def __init__(self):
+        self.elements = []
+
+    def empty(self):
+        return len(self.elements) == 0
+
+    def put(self, item, priority):
+        heapq.heappush(self.elements, (priority, item))
+
+    def get(self):
+        return heapq.heappop(self.elements)[1]
 
 class DStar:
-    def __init__(self, map: OccupancyGridMap, s_start: Tuple[int, int], s_goal: Tuple[int, int]):
-        """
-        :param map: the ground truth map of the environment provided by gui
-        :param s_start: start location
-        :param s_goal: end location
-        """
+    def __init__(self, map, s_start, s_goal):
+        self.map = map
         self.s_start = s_start
         self.s_goal = s_goal
-        self.k_m = 0  # accumulation
-        self.U = PriorityQueue()
+
+        self.g = np.ones((map.x_dim, map.y_dim)) * np.inf
         self.rhs = np.ones((map.x_dim, map.y_dim)) * np.inf
-        self.g = self.rhs.copy()
+        self.g[s_goal] = 0
+        self.rhs[s_goal] = 0
 
-        self.sensed_map = OccupancyGridMap(x_dim=map.x_dim,
-                                           y_dim=map.y_dim,
-                                           exploration_setting='8N')
+        self.open_list = PriorityQueue()
+        self.k_m = 0
+        self.open_list.put(s_goal, self.calculate_key(s_goal))
 
-        self.rhs[self.s_goal] = 0
-        self.U.insert(self.s_goal, Priority(heuristic(self.s_start, self.s_goal), 0))
+        print(f"Initializing D* with start: {s_start}, goal: {s_goal}, map size: {map.x_dim}x{map.y_dim}")
 
-    def calculate_key(self, s: Tuple[int, int]) -> Priority:
-        """
-        :param s: the vertex we want to calculate key
-        :return: Priority class of the two keys
-        """
-        k1 = min(self.g[s], self.rhs[s]) + heuristic(self.s_start, s) + self.k_m
-        k2 = min(self.g[s], self.rhs[s])
-        return Priority(k1, k2)
+    def calculate_key(self, s):
+        g_rhs = min(self.g[s], self.rhs[s])
+        return (g_rhs + self.heuristic(self.s_start, s) + self.k_m, g_rhs)
 
-    def c(self, u: Tuple[int, int], v: Tuple[int, int]) -> float:
-        """
-        Calculate the cost between nodes
-        :param u: from vertex
-        :param v: to vertex
-        :return: euclidean distance to traverse. inf if obstacle in path
-        """
-        if not self.sensed_map.is_unoccupied(u) or not self.sensed_map.is_unoccupied(v):
-            return float('inf')
-        else:
-            return heuristic(u, v)
+    def heuristic(self, a, b):
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
-    def contain(self, u: Tuple[int, int]) -> bool:
-        """
-        Check if vertex u is in the priority queue
-        """
-        return u in self.U.vertices_in_heap
+    def update_vertex(self, u):
+        if u != self.s_goal:
+            neighbors = self.get_neighbors(u)
+            self.rhs[u] = min([self.g[neighbor] + 1 for neighbor in neighbors])
+        self.open_list.put(u, self.calculate_key(u))
 
-    def update_vertex(self, u: Tuple[int, int]):
-        """
-        Update the vertex u in the priority queue
-        """
-        if self.g[u] != self.rhs[u] and self.contain(u):
-            self.U.update(u, self.calculate_key(u))
-        elif self.g[u] != self.rhs[u] and not self.contain(u):
-            self.U.insert(u, self.calculate_key(u))
-        elif self.g[u] == self.rhs[u] and self.contain(u):
-            self.U.remove(u)
+    def get_neighbors(self, s):
+        x, y = s
+        neighbors = []
+        if x > 0:
+            neighbors.append((x - 1, y))
+        if x < self.map.x_dim - 1:
+            neighbors.append((x + 1, y))
+        if y > 0:
+            neighbors.append((x, y - 1))
+        if y < self.map.y_dim - 1:
+            neighbors.append((x, y + 1))
+        return neighbors
 
     def compute_shortest_path(self):
-        """
-        Compute the shortest path using the D* algorithm
-        """
-        iteration = 0  # Add an iteration counter for debugging
-        while self.U.top_key() < self.calculate_key(self.s_start) or self.rhs[self.s_start] > self.g[self.s_start]:
-            iteration += 1
-            print(f"Iteration {iteration}:")
-            print("Top key:", self.U.top_key())
-            print("Calculate key:", self.calculate_key(self.s_start))
-            print("RHS[start]:", self.rhs[self.s_start])
-            print("G[start]:", self.g[self.s_start])
-
-            u = self.U.top()
-            k_old = self.U.top_key()
-            k_new = self.calculate_key(u)
-
-            if k_old < k_new:
-                self.U.update(u, k_new)
-            elif self.g[u] > self.rhs[u]:
+        print("Computing shortest path...")
+        start_time = time.time()
+        iterations = 0
+        while not self.open_list.empty():
+            iterations += 1
+            u = self.open_list.get()
+            if self.g[u] > self.rhs[u]:
                 self.g[u] = self.rhs[u]
-                self.U.remove(u)
-                pred = self.sensed_map.succ(vertex=u)
-                for s in pred:
-                    if s != self.s_goal:
-                        self.rhs[s] = min(self.rhs[s], self.c(s, u) + self.g[u])
+                for s in self.get_neighbors(u):
                     self.update_vertex(s)
             else:
-                self.g_old = self.g[u]
-                self.g[u] = float('inf')
-                pred = self.sensed_map.succ(vertex=u)
-                pred.append(u)
-                for s in pred:
-                    if self.rhs[s] == self.c(s, u) + self.g_old:
-                        if s != self.s_goal:
-                            min_s = float('inf')
-                            succ = self.sensed_map.succ(vertex=s)
-                            for s_ in succ:
-                                temp = self.c(s, s_) + self.g[s_]
-                                if min_s > temp:
-                                    min_s = temp
-                            self.rhs[s] = min_s
-                    self.update_vertex(u)
+                self.g[u] = np.inf
+                self.update_vertex(u)
+                for s in self.get_neighbors(u):
+                    self.update_vertex(s)
+            # Timeout check
+            if time.time() - start_time > 10:  # 10 seconds timeout for the computation
+                print(f"Timeout during shortest path computation after {iterations} iterations")
+                break
+        print(f"Shortest path computed in {iterations} iterations.")
 
-    def rescan(self) -> Vertices:
-        """
-        Perform a rescan and return new edges and old costs
-        """
-        new_edges_and_old_costs = self.new_edges_and_old_costs
-        self.new_edges_and_old_costs = None
-        return new_edges_and_old_costs
-
-    def move_and_replan(self, robot_position: Tuple[int, int]):
-        """
-        Move the robot to a new position and replan the path
-        """
-        path = [robot_position]
+    def move_and_replan(self, robot_position):
+        print(f"Moving and replanning from position: {robot_position}")
         self.s_start = robot_position
+        self.k_m += self.heuristic(self.s_start, self.s_goal)
         self.compute_shortest_path()
-
-        comparison_details = []  # Initialize as an empty list
-
-        while self.s_start != self.s_goal:
-            assert (self.rhs[self.s_start] != float('inf')), "There is no known path!"
-
-            succ = self.sensed_map.succ(self.s_start, avoid_obstacles=False)
-            min_s = float('inf')
-            arg_min = None
-
-            for s_ in succ:
-                temp = self.c(self.s_start, s_) + self.g[s_]
-                comparison_details.append((s_, temp))  # Store comparison details
-                if temp < min_s:
-                    min_s = temp
-                    arg_min = s_
-
-            if arg_min is None:
-                print("No valid path found.")
-                return None
-
-            self.s_start = arg_min
-            path.append(self.s_start)
-
-        # print("D* Goal reached!")
-        comparison_details_table = [(f"Node {node}", cost) for node, cost in comparison_details]
-        print(tabulate(comparison_details_table, headers=["Node", "Cost"]))
+        path = self.extract_path()
+        print(f"Path: {path}")
         return path, self.g, self.rhs
 
-# Usage example
-# Assuming map, s_start, and s_goal are appropriately defined
-# map = OccupancyGridMap(...)
-# s_start = (start_x, start_y)
-# s_goal = (goal_x, goal_y)
-# dstar = DStar(map, s_start, s_goal)
-# dstar.compute_shortest_path()
-# path, g_values, rhs_values = dstar.move_and_replan(robot_position=(initial_x, initial_y))
+    def extract_path(self):
+        path = []
+        current = self.s_start
+        while current != self.s_goal:
+            path.append(current)
+            neighbors = self.get_neighbors(current)
+            current = min(neighbors, key=lambda s: self.g[s])
+            if self.g[current] == np.inf:
+                print("Path blocked or goal unreachable.")
+                break
+        path.append(self.s_goal)
+        return path
