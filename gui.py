@@ -54,19 +54,21 @@ class Animation:
                     if self.world.grid[x][y] == -1:
                         color = (0, 0, 0)  # Obstacles
                     elif self.world.grid[x][y] == 1:
-                        color = (255, 255, 0)  # Start node (yellow)
+                        color = (255,165,0)  # Start node (yellow)
                     elif self.world.grid[x][y] == 2:
                         color = (255, 0, 0)  # Goal node (red)
                     pygame.draw.rect(self.screen, color, pygame.Rect(x * 10, y * 10, 10, 10))
                     pygame.draw.rect(self.screen, (0, 0, 0), pygame.Rect(x * 10, y * 10, 10, 10), 1)  # Grid border
 
             for (x, y) in visited_nodes:
-                pygame.draw.rect(self.screen, (0, 0, 255), pygame.Rect(x * 10, y * 10, 10, 10))  # Visited nodes are blue
-                pygame.draw.rect(self.screen, (0, 0, 0), pygame.Rect(x * 10, y * 10, 10, 10), 1)  # Visited nodes border
+                if (x, y) != self.start and (x, y) != self.goal:
+                    pygame.draw.rect(self.screen, (0, 0, 255), pygame.Rect(x * 10, y * 10, 10, 10))  # Visited nodes are blue
+                    pygame.draw.rect(self.screen, (0, 0, 0), pygame.Rect(x * 10, y * 10, 10, 10), 1)  # Visited nodes border
 
             for (x, y) in path:
-                pygame.draw.rect(self.screen, (0, 255, 0), pygame.Rect(x * 10, y * 10, 10, 10))  # Shortest path is green
-                pygame.draw.rect(self.screen, (0, 0, 0), pygame.Rect(x * 10, y * 10, 10, 10), 1)  # Shortest path border
+                if (x, y) != self.start and (x, y) != self.goal:
+                    pygame.draw.rect(self.screen, (0, 255, 0), pygame.Rect(x * 10, y * 10, 10, 10))  # Shortest path is green
+                    pygame.draw.rect(self.screen, (0, 0, 0), pygame.Rect(x * 10, y * 10, 10, 10), 1)  # Shortest path border
 
             pygame.display.flip()
             clock.tick(10)
