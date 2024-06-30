@@ -62,7 +62,10 @@ class DStarLite:
         if u != self.s_goal:
             neighbors = self.get_neighbors(u)
             self.rhs[u] = min([self.g[neighbor] + 1 for neighbor in neighbors if self.map.grid[neighbor] != -1])
-        self.open_list.put(u, self.calculate_key(u))
+        if u in self.open_list.elements:
+            self.open_list.elements.remove(u)
+        if self.g[u] != self.rhs[u]:
+            self.open_list.put(u, self.calculate_key(u))
 
     def get_neighbors(self, s):
         x, y = s
@@ -70,7 +73,7 @@ class DStarLite:
         if x > 0 and self.map.grid[x - 1, y] != -1:
             neighbors.append((x - 1, y))
         if x < self.map.x_dim - 1 and self.map.grid[x + 1, y] != -1:
-            neighbors.append((x + 1, y))
+                        neighbors.append((x + 1, y))
         if y > 0 and self.map.grid[x, y - 1] != -1:
             neighbors.append((x, y - 1))
         if y < self.map.y_dim - 1 and self.map.grid[x, y + 1] != -1:
@@ -114,6 +117,7 @@ class DStarLite:
         while current != self.s_goal:
             path.append(current)
             neighbors = self.get_neighbors(current)
+            print(f"Current: {current}, Neighbors: {neighbors}")
             current = min(neighbors, key=lambda s: self.g[s])
             if self.g[current] == np.inf:
                 print("Path blocked or goal unreachable.")

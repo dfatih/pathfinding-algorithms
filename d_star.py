@@ -62,7 +62,11 @@ class DStar:
         if u != self.s_goal:
             neighbors = self.get_neighbors(u)
             self.rhs[u] = min([self.g[neighbor] + 1 for neighbor in neighbors if self.map.grid[neighbor] != -1])
-        self.open_list.put(u, self.calculate_key(u))
+        if u in self.open_list.elements:
+            self.open_list.elements.remove(u)
+        if self.g[u] != self.rhs[u]:
+            self.open_list.put(u, self.calculate_key(u))
+        print(f"Updated vertex: {u}, g: {self.g[u]}, rhs: {self.rhs[u]}")
 
     def get_neighbors(self, s):
         x, y = s
@@ -75,6 +79,7 @@ class DStar:
             neighbors.append((x, y - 1))
         if y < self.map.y_dim - 1 and self.map.grid[x, y + 1] != -1:
             neighbors.append((x, y + 1))
+        print(f"Neighbors for {s}: {neighbors}")
         return neighbors
 
     def compute_shortest_path(self):
@@ -114,6 +119,7 @@ class DStar:
         while current != self.s_goal:
             path.append(current)
             neighbors = self.get_neighbors(current)
+            print(f"Current: {current}, Neighbors: {neighbors}")
             current = min(neighbors, key=lambda s: self.g[s])
             if self.g[current] == np.inf:
                 print("Path blocked or goal unreachable.")
