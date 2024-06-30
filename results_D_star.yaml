@@ -1,0 +1,63 @@
+algorithm: D_star
+elapsed_time: 19.356794595718384
+goal_node: !!python/tuple
+- 23
+- 47
+grid_size:
+- 50
+- 50
+memory_usage: 817.78515625
+num_nodes: 2500
+num_nodes_shortest_path: 2
+num_obstacles_found: 0
+num_obstacles_total: 28
+num_visited_nodes: 830320
+random_seed: 3756
+start_node: !!python/tuple
+- 16
+- 20
+window_size:
+- 500
+- 500
+algorithm: D_star
+elapsed_time: 13.269649267196655
+goal_node: !!python/tuple
+- 26
+- 23
+grid_size:
+- 64
+- 64
+memory_usage: 818.1328125
+num_nodes: 4096
+num_nodes_shortest_path: 2
+num_obstacles_found: 0
+num_obstacles_total: 56
+num_visited_nodes: 830320
+random_seed: 9866
+start_node: !!python/tuple
+- 20
+- 28
+window_size:
+- 640
+- 640
+algorithm: D_star
+elapsed_time: 21.81641721725464
+goal_node: !!python/tuple
+- 3
+- 6
+grid_size:
+- 68
+- 68
+memory_usage: 862.56640625
+num_nodes: 4624
+num_nodes_shortest_path: 2
+num_obstacles_found: 0
+num_obstacles_total: 69
+num_visited_nodes: 878798
+random_seed: 6349
+start_node: !!python/tuple
+- 30
+- 15
+window_size:
+- 680
+- 680

@@ -30,7 +30,18 @@ class DStar:
         self.k_m = 0
         self.open_list.put(s_goal, self.calculate_key(s_goal))
 
+        self.place_random_obstacles(10, 100)
+
+        self.visited_nodes = []
+
         print(f"Initializing D* with start: {s_start}, goal: {s_goal}, map size: {map.x_dim}x{map.y_dim}")
+
+    def place_random_obstacles(self, min_obstacles, max_obstacles):
+        num_obstacles = np.random.randint(min_obstacles, max_obstacles)
+        for _ in range(num_obstacles):
+            x = np.random.randint(0, self.map.x_dim)
+            y = np.random.randint(0, self.map.y_dim)
+            self.map.grid[x, y] = -1
 
     def calculate_key(self, s):
         g_rhs = min(self.g[s], self.rhs[s])
@@ -62,9 +73,12 @@ class DStar:
         print("Computing shortest path...")
         start_time = time.time()
         iterations = 0
+        visited_nodes = []
         while not self.open_list.empty():
             iterations += 1
             u = self.open_list.get()
+            visited_nodes.append(u)
+            self.visited_nodes.append(u)
             if self.g[u] > self.rhs[u]:
                 self.g[u] = self.rhs[u]
                 for s in self.get_neighbors(u):
@@ -79,15 +93,16 @@ class DStar:
                 print(f"Timeout during shortest path computation after {iterations} iterations")
                 break
         print(f"Shortest path computed in {iterations} iterations.")
+        return visited_nodes
 
     def move_and_replan(self, robot_position):
         print(f"Moving and replanning from position: {robot_position}")
         self.s_start = robot_position
         self.k_m += self.heuristic(self.s_start, self.s_goal)
-        self.compute_shortest_path()
+        visited_nodes = self.compute_shortest_path()
         path = self.extract_path()
         print(f"Path: {path}")
-        return path, self.g, self.rhs
+        return path, visited_nodes
 
     def extract_path(self):
         path = []
