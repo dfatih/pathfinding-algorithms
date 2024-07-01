@@ -55,11 +55,13 @@ class DStar:
         return np.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
 
     def update_vertex(self, u):
+        #print(f"Updating vertex: {u}")
         if u != self.s_goal:
             neighbors = self.get_neighbors(u)
             self.rhs[u] = min([self.g[neighbor] + 1 for neighbor in neighbors if self.map.grid[neighbor] != -1])
-        if u in self.open_list.elements:
-            self.open_list.elements.remove(u)
+        if u in [item[1] for item in self.open_list.elements]:
+            self.open_list.elements = [(p, i) for p, i in self.open_list.elements if i != u]
+            heapq.heapify(self.open_list.elements)
         if self.g[u] != self.rhs[u]:
             self.open_list.put(u, self.calculate_key(u))
 
@@ -74,6 +76,7 @@ class DStar:
             neighbors.append((x, y - 1))
         if y < self.map.y_dim - 1 and self.map.grid[x, y + 1] != -1:
             neighbors.append((x, y + 1))
+        #print(f"Neighbors of {s}: {neighbors}")
         return neighbors
 
     def compute_shortest_path(self):
@@ -84,6 +87,7 @@ class DStar:
                 iterations += 1
                 u = self.open_list.get()
                 self.visited_nodes.append(u)
+                print(f"Processing node: {u}, g: {self.g[u]}, rhs: {self.rhs[u]}")
                 if self.g[u] > self.rhs[u]:
                     self.g[u] = self.rhs[u]
                     for s in self.get_neighbors(u):
@@ -104,6 +108,7 @@ class DStar:
     def move_and_replan(self, robot_position):
         self.s_start = robot_position
         self.k_m += self.heuristic(self.s_start, self.s_goal)
+        print(f"Replanning from new start position: {robot_position}")
         path = self.compute_shortest_path()
         return path, self.visited_nodes
 
@@ -113,10 +118,28 @@ class DStar:
         while current != self.s_goal:
             path.append(current)
             neighbors = self.get_neighbors(current)
+            if not neighbors:
+                print("No available neighbors to move to.")
+                break
             current = min(neighbors, key=lambda s: self.g[s])
             if self.g[current] == np.inf:
                 if not self.headless:
                     print("Path blocked or goal unreachable.")
                 break
         path.append(self.s_goal)
+        print(f"Extracted path: {path}")
         return path
+
+    def modify_cost(self, X, Y, new_cost):
+        old_cost = self.map.grid[X][Y]
+        self.map.grid[X][Y] = new_cost
+        #print(f"Modified cost from {X} to {Y}, old cost: {old_cost}, new cost: {new_cost}")
+        if new_cost > old_cost:
+            if X not in [item[1] for item in self.open_list.elements]:
+                self.open_list.put(X, self.calculate_key(X))
+            X_state = 'RAISE'
+        else:
+            if X not in [item[1] for item in self.open_list.elements]:
+                self.open_list.put(X, self.calculate_key(X))
+            X_state = 'LOWER'
+        self.update_vertex(X)
