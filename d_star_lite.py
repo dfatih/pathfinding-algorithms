@@ -1,6 +1,7 @@
 import numpy as np
 import heapq
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 class PriorityQueue:
     def __init__(self):
@@ -51,7 +52,7 @@ class DStarLite:
         return (g_rhs + self.heuristic(self.s_start, s) + self.k_m, g_rhs)
 
     def heuristic(self, a, b):
-        return abs(a[0] - b[0]) + abs(a[1] - b[1])
+        return np.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
 
     def update_vertex(self, u):
         if u != self.s_goal:
@@ -78,25 +79,26 @@ class DStarLite:
     def compute_shortest_path(self):
         start_time = time.time()
         iterations = 0
-        while not self.open_list.empty():
-            iterations += 1
-            u = self.open_list.get()
-            self.visited_nodes.append(u)
-            if self.g[u] > self.rhs[u]:
-                self.g[u] = self.rhs[u]
-                for s in self.get_neighbors(u):
-                    self.update_vertex(s)
-            else:
-                self.g[u] = np.inf
-                self.update_vertex(u)
-                for s in self.get_neighbors(u):
-                    self.update_vertex(s)
-            if time.time() - start_time > 60:  # 60 seconds timeout for the computation
-                if not self.headless:
-                    print(f"Timeout during shortest path computation after {iterations} iterations")
-                break
-        if not self.headless:
-            print(f"Shortest path computed in {iterations} iterations.")
+        with ThreadPoolExecutor() as executor:
+            while not self.open_list.empty():
+                iterations += 1
+                u = self.open_list.get()
+                self.visited_nodes.append(u)
+                if self.g[u] > self.rhs[u]:
+                    self.g[u] = self.rhs[u]
+                    for s in self.get_neighbors(u):
+                        executor.submit(self.update_vertex, s)
+                else:
+                    self.g[u] = np.inf
+                    self.update_vertex(u)
+                    for s in self.get_neighbors(u):
+                        executor.submit(self.update_vertex, s)
+                if time.time() - start_time > 30:  # 30 Sekunden Timeout
+                    if not self.headless:
+                        print(f"Timeout during shortest path computation after {iterations} iterations")
+                    break
+            if not self.headless:
+                print(f"Shortest path computed in {iterations} iterations.")
         return self.extract_path()
 
     def move_and_replan(self, robot_position):

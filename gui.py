@@ -54,7 +54,7 @@ class Animation:
                     if self.world.grid[x][y] == -1:
                         color = (0, 0, 0)  # Obstacles
                     elif self.world.grid[x][y] == 1:
-                        color = (255,165,0)  # Start node (yellow)
+                        color = (53,144,174)  # Start node (yellow)
                     elif self.world.grid[x][y] == 2:
                         color = (255, 0, 0)  # Goal node (red)
                     pygame.draw.rect(self.screen, color, pygame.Rect(x * 10, y * 10, 10, 10))
